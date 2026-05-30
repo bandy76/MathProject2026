@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数学分析 · 动态可视化学习宇宙</title>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script>
+window.MathJax = {
+    tex: {inlineMath: [["\\(", "\\)"], ["$", "$"]]},
+    startup: {typeset: false}
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+:root{
+    --ink:#e9fbff;
+    --muted:#98adba;
+    --cyan:#23d8ff;
+    --mint:#58f2a7;
+    --amber:#ffd166;
+    --rose:#ff6b7f;
+    --violet:#a68cff;
+    --panel:rgba(8,15,25,0.82);
+    --panel-strong:rgba(5,12,21,0.94);
+    --line:rgba(154,232,255,0.22);
+    --shadow:0 20px 60px rgba(0,0,0,0.42);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;}
+body{
+    font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;
+    background:#05080d;
+    color:var(--ink);
+    overflow:hidden;
+}
+button,input,textarea{font:inherit;}
+button{border:0;color:inherit;background:transparent;cursor:pointer;}
+#bg{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:-3;
+}
+.ambient{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:-2;
+    background:
+        radial-gradient(circle at var(--mx,50%) var(--my,45%), rgba(35,216,255,0.18), transparent 26rem),
+        radial-gradient(circle at 15% 20%, rgba(88,242,167,0.16), transparent 22rem),
+        radial-gradient(circle at 86% 72%, rgba(255,209,102,0.12), transparent 24rem),
+        linear-gradient(135deg, rgba(9,14,25,0.3), rgba(1,3,7,0.72));
+}
+.ambient::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    opacity:0.18;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size:64px 64px;
+    mask-image:linear-gradient(to bottom, transparent, black 18%, black 78%, transparent);
+}
+#splash{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    overflow:hidden;
+    background:rgba(2,6,12,0.36);
+    backdrop-filter:blur(10px);
+    z-index:5;
+    opacity:1;
+    transition:opacity .55s ease, visibility .55s ease;
+}
+body.system-on #splash{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+}
+.splash-orbits{
+    position:absolute;
+    width:min(82vw,780px);
+    aspect-ratio:1;
+    border-radius:50%;
+    border:1px solid rgba(35,216,255,0.18);
+    animation:orbitSpin 28s linear infinite;
+}
+.splash-orbits::before,
+.splash-orbits::after{
+    content:"";
+    position:absolute;
+    inset:9%;
+    border-radius:50%;
+    border:1px dashed rgba(255,209,102,0.25);
+    animation:orbitSpin 18s linear infinite reverse;
+}
+.splash-orbits::after{
+    inset:23%;
+    border-color:rgba(88,242,167,0.22);
+    animation-duration:12s;
+}
+.splash-core{
+    position:relative;
+    width:min(92vw,760px);
+    padding:48px 28px;
+}
+.splash-core h1{
+    font-size:clamp(2.25rem,6vw,5rem);
+    line-height:1.08;
+    letter-spacing:0;
+    color:transparent;
+    background:linear-gradient(90deg, #eaffff 0%, #23d8ff 34%, #ffd166 68%, #58f2a7 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    filter:drop-shadow(0 0 22px rgba(35,216,255,0.52));
+    animation:titlePulse 3s ease-in-out infinite alternate;
+}
+.splash-core p{
+    margin:20px auto 0;
+    max-width:620px;
+    color:#ccebf3;
+    font-size:clamp(1rem,2.4vw,1.25rem);
+    line-height:1.8;
+}
+.enter-btn{
+    position:relative;
+    margin-top:34px;
+    padding:14px 34px;
+    border:1px solid rgba(35,216,255,0.72);
+    border-radius:6px;
+    background:linear-gradient(135deg, rgba(35,216,255,0.16), rgba(88,242,167,0.12));
+    box-shadow:0 0 28px rgba(35,216,255,0.2), inset 0 0 18px rgba(255,255,255,0.05);
+    overflow:hidden;
+    transition:transform .22s ease, background .22s ease, color .22s ease;
+}
+.enter-btn::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    transform:translateX(-105%);
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,0.34), transparent);
+    animation:buttonSweep 2.8s ease-in-out infinite;
+}
+.enter-btn:hover{transform:translateY(-2px);background:rgba(35,216,255,0.82);color:#031018;}
+.formula-float{
+    position:absolute;
+    color:rgba(233,251,255,0.84);
+    border:1px solid rgba(154,232,255,0.18);
+    border-radius:999px;
+    background:rgba(5,12,21,0.58);
+    padding:8px 14px;
+    box-shadow:0 10px 32px rgba(0,0,0,0.24);
+    animation:floatFormula 6s ease-in-out infinite;
+    white-space:nowrap;
+}
+.f1{left:8%;top:20%;animation-delay:-1s;}
+.f2{right:9%;top:26%;animation-delay:-2.4s;color:var(--amber);}
+.f3{left:14%;bottom:22%;animation-delay:-3.2s;color:var(--mint);}
+.f4{right:13%;bottom:19%;animation-delay:-4.5s;color:var(--violet);}
+
+#main{
+    display:none;
+    width:100vw;
+    height:100vh;
+    min-height:0;
+}
+body.system-on #main{
+    display:grid;
+    grid-template-columns:300px minmax(0,1fr) 340px;
+}
+.sidebar{
+    min-height:0;
+    overflow-y:auto;
+    padding:22px 16px;
+    border-right:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(5,12,21,0.96), rgba(9,15,24,0.78));
+    box-shadow:var(--shadow);
+}
+.brand{
+    padding:0 8px 18px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:18px;
+}
+.brand strong{
+    display:block;
+    font-size:1.12rem;
+    color:#ffffff;
+}
+.brand span{
+    display:block;
+    margin-top:8px;
+    color:var(--muted);
+    line-height:1.55;
+    font-size:.9rem;
+}
+.nav-section{margin:18px 0;}
+.section-toggle{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    padding:10px 9px;
+    border-radius:6px;
+    color:#ffffff;
+    background:rgba(255,255,255,0.04);
+}
+.section-toggle span{font-weight:700;}
+.section-toggle i{
+    width:8px;
+    height:8px;
+    border-right:2px solid var(--cyan);
+    border-bottom:2px solid var(--cyan);
+    transform:rotate(45deg);
+    transition:transform .2s ease;
+}
+.nav-section.closed .section-toggle i{transform:rotate(-45deg);}
+.menu-group{
+    display:grid;
+    gap:7px;
+    margin-top:10px;
+}
+.nav-section.closed .menu-group{display:none;}
+.menu-item{
+    width:100%;
+    text-align:left;
+    padding:10px 11px;
+    border-radius:6px;
+    color:#b8d6df;
+    border:1px solid transparent;
+    transition:background .18s ease, color .18s ease, transform .18s ease, border .18s ease;
+}
+.menu-item:hover,
+.menu-item.active{
+    color:#ffffff;
+    background:rgba(35,216,255,0.1);
+    border-color:rgba(35,216,255,0.28);
+    transform:translateX(4px);
+}
+.content{
+    min-width:0;
+    min-height:0;
+    overflow-y:auto;
+    padding:28px;
+    background:rgba(3,9,18,0.54);
+}
+.topic-page{
+    max-width:1180px;
+    margin:0 auto 48px;
+}
+.topic-head{
+    padding-bottom:22px;
+    border-bottom:1px solid var(--line);
+}
+.topic-kicker{
+    color:var(--amber);
+    font-size:.9rem;
+    font-weight:700;
+    margin-bottom:10px;
+}
+.topic-head h2{
+    font-size:clamp(1.8rem,4vw,3.2rem);
+    line-height:1.15;
+    letter-spacing:0;
+}
+.topic-head p{
+    margin-top:14px;
+    color:#c6dce4;
+    line-height:1.85;
+    max-width:880px;
+}
+.formula-strip{
+    margin-top:18px;
+    padding:15px 16px;
+    border-left:3px solid var(--cyan);
+    background:rgba(35,216,255,0.08);
+    color:#ffffff;
+    overflow-x:auto;
+}
+.lesson-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+    margin-top:20px;
+}
+.lesson-block{
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:rgba(8,15,25,0.72);
+    padding:16px;
+}
+.lesson-block h3{
+    font-size:1rem;
+    color:#ffffff;
+    margin-bottom:10px;
+}
+.lesson-block p,
+.lesson-block li{
+    color:#c4d8df;
+    line-height:1.78;
+}
+.lesson-block ul{padding-left:1.1rem;}
+.demo-shell{
+    margin-top:22px;
+    border:1px solid rgba(154,232,255,0.24);
+    border-radius:8px;
+    overflow:hidden;
+    background:linear-gradient(180deg, rgba(5,12,21,0.92), rgba(8,15,25,0.68));
+}
+.demo-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:13px 16px;
+    border-bottom:1px solid var(--line);
+}
+.demo-top strong{color:#ffffff;}
+.demo-status{
+    color:var(--muted);
+    font-size:.9rem;
+    text-align:right;
+}
+.demo-body{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 260px;
+    min-height:380px;
+}
+.visual-canvas{
+    display:block;
+    width:100%;
+    height:430px;
+    background:radial-gradient(circle at center, rgba(35,216,255,0.08), rgba(1,4,9,0.42));
+}
+.control-panel{
+    border-left:1px solid var(--line);
+    padding:16px;
+    background:rgba(0,0,0,0.18);
+}
+.control-row{
+    margin-bottom:18px;
+}
+.control-row label{
+    display:flex;
+    justify-content:space-between;
+    color:#e9fbff;
+    font-size:.94rem;
+    margin-bottom:9px;
+}
+.control-row output{color:var(--amber);}
+input[type="range"]{
+    width:100%;
+    accent-color:var(--cyan);
+}
+.metric-list{
+    display:grid;
+    gap:8px;
+    margin-top:14px;
+}
+.metric{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:9px 10px;
+    border-radius:6px;
+    background:rgba(255,255,255,0.04);
+    color:#c4d8df;
+}
+.metric strong{color:#ffffff;font-weight:700;}
+.assistant{
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    border-left:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(5,12,21,0.96), rgba(4,9,16,0.86));
+    box-shadow:var(--shadow);
+}
+.assistant-head{
+    padding:20px 18px 14px;
+    border-bottom:1px solid var(--line);
+}
+.assistant-head strong{
+    display:block;
+    color:#ffffff;
+    font-size:1.05rem;
+}
+.assistant-head span{
+    display:block;
+    margin-top:7px;
+    color:var(--muted);
+    line-height:1.5;
+    font-size:.88rem;
+}
+.api-status{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    margin-top:10px;
+    padding:5px 8px;
+    border-radius:999px;
+    border:1px solid rgba(154,232,255,0.18);
+    color:#ccebf3;
+    background:rgba(255,255,255,0.05);
+    font-size:.78rem;
+}
+.api-status::before{
+    content:"";
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#98adba;
+}
+.api-status.online::before{background:var(--mint);box-shadow:0 0 10px rgba(88,242,167,0.8);}
+.api-status.offline::before{background:var(--amber);box-shadow:0 0 10px rgba(255,209,102,0.6);}
+.api-status.error::before{background:var(--rose);box-shadow:0 0 10px rgba(255,107,127,0.68);}
+.chat-log{
+    flex:1;
+    min-height:0;
+    overflow-y:auto;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+.bubble{
+    max-width:92%;
+    padding:11px 12px;
+    border-radius:8px;
+    line-height:1.65;
+    font-size:.94rem;
+}
+.bubble.ai{
+    align-self:flex-start;
+    background:rgba(35,216,255,0.11);
+    border:1px solid rgba(35,216,255,0.2);
+    color:#dffaff;
+}
+.bubble.pending{
+    opacity:.78;
+}
+.bubble.user{
+    align-self:flex-end;
+    background:rgba(255,209,102,0.13);
+    border:1px solid rgba(255,209,102,0.22);
+    color:#fff5d3;
+}
+.quick-asks{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    padding:0 16px 12px;
+}
+.quick-asks button{
+    padding:7px 9px;
+    border-radius:999px;
+    color:#d9f7ff;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(154,232,255,0.16);
+    font-size:.85rem;
+}
+.ask-box{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    padding:14px 16px 18px;
+    border-top:1px solid var(--line);
+}
+.ask-box textarea{
+    min-height:44px;
+    max-height:120px;
+    resize:vertical;
+    color:#ffffff;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(154,232,255,0.22);
+    border-radius:7px;
+    padding:10px;
+    outline:none;
+}
+.ask-box textarea:focus{border-color:rgba(35,216,255,0.62);}
+.ask-box button{
+    align-self:end;
+    min-height:44px;
+    padding:0 14px;
+    border-radius:7px;
+    background:linear-gradient(135deg, rgba(35,216,255,0.82), rgba(88,242,167,0.78));
+    color:#031018;
+    font-weight:700;
+}
+.welcome-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:16px;
+    margin-top:22px;
+}
+.welcome-tile{
+    min-height:135px;
+    padding:16px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:rgba(8,15,25,0.72);
+    text-align:left;
+    transition:transform .18s ease, border .18s ease;
+}
+.welcome-tile:hover{
+    transform:translateY(-3px);
+    border-color:rgba(35,216,255,0.48);
+}
+.welcome-tile strong{display:block;color:#ffffff;margin-bottom:10px;}
+.welcome-tile span{display:block;color:#b9d1da;line-height:1.62;}
+
+@keyframes orbitSpin{to{transform:rotate(360deg);}}
+@keyframes titlePulse{
+    from{filter:drop-shadow(0 0 12px rgba(35,216,255,0.42));}
+    to{filter:drop-shadow(0 0 34px rgba(88,242,167,0.36));}
+}
+@keyframes buttonSweep{
+    0%,35%{transform:translateX(-105%);}
+    75%,100%{transform:translateX(105%);}
+}
+@keyframes floatFormula{
+    0%,100%{transform:translateY(0) rotate(-1deg);opacity:.72;}
+    50%{transform:translateY(-18px) rotate(1deg);opacity:1;}
+}
+
+@media(max-width:1180px){
+    body.system-on #main{grid-template-columns:260px minmax(0,1fr);}
+    .assistant{
+        position:fixed;
+        right:18px;
+        bottom:18px;
+        width:min(390px,calc(100vw - 36px));
+        height:min(620px,calc(100vh - 36px));
+        z-index:4;
+        border:1px solid var(--line);
+        border-radius:8px;
+        overflow:hidden;
+    }
+}
+@media(max-width:900px){
+    body{overflow:auto;}
+    body.system-on #main{
+        display:flex;
+        flex-direction:column;
+        height:auto;
+        min-height:100vh;
+    }
+    .sidebar{
+        max-height:none;
+        border-right:0;
+        border-bottom:1px solid var(--line);
+    }
+    .content{overflow:visible;padding:20px;}
+    .lesson-grid,.welcome-grid{grid-template-columns:1fr;}
+    .demo-body{grid-template-columns:1fr;}
+    .control-panel{border-left:0;border-top:1px solid var(--line);}
+    .visual-canvas{height:340px;}
+    .assistant{
+        position:relative;
+        right:auto;
+        bottom:auto;
+        width:auto;
+        height:540px;
+        margin:0 16px 18px;
+    }
+}
+@media(max-width:560px){
+    .splash-core{padding:34px 18px;}
+    .formula-float{display:none;}
+    .demo-top{display:block;}
+    .demo-status{text-align:left;margin-top:8px;}
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="ambient" aria-hidden="true"></div>
+
+<section id="splash" aria-label="启动界面">
+    <div class="splash-orbits" aria-hidden="true"></div>
+    <span class="formula-float f1">∇f = (fx, fy)</span>
+    <span class="formula-float f2">∫∫D f dA</span>
+    <span class="formula-float f3">Tn(x) = Σ akx^k</span>
+    <span class="formula-float f4">Σ bn sin(nx)</span>
+    <div class="splash-core">
+        <h1>数学分析</h1>
+        <p>多元微分、积分、级数与可视化演示整合在同一个动态学习空间里。</p>
+        <button class="enter-btn" id="enterBtn" type="button">进入数学宇宙</button>
+    </div>
+</section>
+
+<main id="main">
+    <aside class="sidebar" aria-label="章节导航">
+        <div class="brand">
+            <strong>数学分析学习舱</strong>
+            <span>点击章节即可切换内容、公式、例题和动态演示。</span>
+        </div>
+
+        <section class="nav-section">
+            <button class="section-toggle" type="button" data-toggle="diff"><span>多元微分学</span><i></i></button>
+            <div class="menu-group" id="diff">
+                <button class="menu-item" type="button" data-page="Rn">Rn 空间</button>
+                <button class="menu-item" type="button" data-page="limit">极限与连续</button>
+                <button class="menu-item" type="button" data-page="derivative">导数与微分</button>
+                <button class="menu-item" type="button" data-page="taylor">泰勒公式与极值</button>
+            </div>
+        </section>
+
+        <section class="nav-section">
+            <button class="section-toggle" type="button" data-toggle="integral"><span>多元积分学</span><i></i></button>
+            <div class="menu-group" id="integral">
+                <button class="menu-item" type="button" data-page="double">二重积分</button>
+                <button class="menu-item" type="button" data-page="triple">三重积分</button>
+            </div>
+        </section>
+
+        <section class="nav-section">
+            <button class="section-toggle" type="button" data-toggle="series"><span>无穷级数</span><i></i></button>
+            <div class="menu-group" id="series">
+                <button class="menu-item" type="button" data-page="fourier">傅立叶级数</button>
+            </div>
+        </section>
+    </aside>
+
+    <section class="content" id="content" aria-live="polite"></section>
+
+    <aside class="assistant" aria-label="AI 提问助手">
+        <div class="assistant-head">
+            <strong>AI 提问助手</strong>
+            <span id="assistantContext">当前章节：欢迎页</span>
+            <div class="api-status offline" id="apiStatus">DeepSeek V4 Flash 未连接</div>
+        </div>
+        <div class="chat-log" id="chatLog">
+            <div class="bubble ai">你好，我可以围绕当前章节解释概念、给例题提示，也可以比较不同知识点之间的联系。连接本地代理后会优先调用 DeepSeek V4 Flash。</div>
+        </div>
+        <div class="quick-asks">
+            <button type="button" data-ask="本页核心公式是什么？">核心公式</button>
+            <button type="button" data-ask="给我一个具体例题。">例题</button>
+            <button type="button" data-ask="这个动画想说明什么？">动画含义</button>
+        </div>
+        <form class="ask-box" id="askForm">
+            <textarea id="askInput" rows="2" placeholder="输入你的数学问题"></textarea>
+            <button type="submit">提问</button>
+        </form>
+    </aside>
+</main>
+
+<script>
+const pages = {
+    Rn: {
+        category:"多元微分学",
+        title:"Rn 空间",
+        summary:"Rn 空间把有序数组视为点或向量，是多元函数、极限、连续、导数和积分的共同舞台。理解距离、邻域、开集和向量运算，后面的抽象概念会立刻变得可计算。",
+        formula:String.raw`\\( x=(x_1,\dots,x_n),\quad \|x\|=\sqrt{x_1^2+\cdots+x_n^2},\quad d(x,y)=\|x-y\| \\)`,
+        visualTitle:"向量投影与范数演示",
+        controls:String.raw`
+            <div class="control-row">
+                <label for="dimRange">维数 n <output id="dimValue">4</output></label>
+                <input id="dimRange" type="range" min="2" max="6" step="1" value="4">
+            </div>
+            <div class="metric-list">
+                <div class="metric"><span>当前范数</span><strong id="normMetric">0</strong></div>
+                <div class="metric"><span>投影坐标</span><strong id="coordMetric">(0,0)</strong></div>
+            </div>
+        `,
+        html:String.raw`
+            <div class="lesson-grid">
+                <div class="lesson-block">
+                    <h3>核心理解</h3>
+                    <p>在 \\(R^2\\) 中点有两个坐标，在 \\(R^3\\) 中点有三个坐标。推广到 \\(R^n\\) 后，虽然无法全部画出来，但向量加法、数乘、距离和内积仍然按照同一套代数规则工作。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>具体例子</h3>
+                    <p>设 \\(x=(1,2,-2,0)\\)，则 \\(\|x\|=\sqrt{1+4+4+0}=3\\)。若 \\(y=(0,1,1,2)\\)，两点距离为 \\(\sqrt{(1-0)^2+(2-1)^2+(-2-1)^2+(0-2)^2}=\sqrt{15}\\)。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>邻域与收敛</h3>
+                    <p>以 \\(a\\) 为中心、半径 \\(r\\) 的邻域是 \\(B(a,r)=\{x:\|x-a\|<r\}\\)。数列 \\(x_k\\to a\\) 的意思是点 \\(x_k\\) 最终会进入任何小邻域。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>常见判断</h3>
+                    <ul>
+                        <li>距离公式决定“靠近”的含义。</li>
+                        <li>内积 \\(x\cdot y\\) 决定角度和投影。</li>
+                        <li>维数增加不改变公式，只增加坐标个数。</li>
+                    </ul>
+                </div>
+            </div>
+        `
+    },
+    limit: {
+        category:"多元微分学",
+        title:"多元函数的极限与连续",
+        summary:"多元极限要求从所有可能路径靠近同一点时函数值都趋于同一数。只验证一条直线往往不够；找到两条路径给出不同结果，就能证明极限不存在。",
+        formula:String.raw`\\( \lim_{(x,y)\to(a,b)} f(x,y)=L \iff 0<\sqrt{(x-a)^2+(y-b)^2}<\delta \Rightarrow |f(x,y)-L|<\varepsilon \\)`,
+        visualTitle:"多路径趋近同一点",
+        controls:String.raw`
+            <div class="control-row">
+                <label for="limitSpeed">趋近速度 <output id="limitSpeedValue">1.0</output></label>
+                <input id="limitSpeed" type="range" min="0.4" max="2.2" step="0.1" value="1">
+            </div>
+            <div class="control-row">
+                <label for="epsilonRange">ε 圆盘 <output id="epsilonValue">0.35</output></label>
+                <input id="epsilonRange" type="range" min="0.12" max="0.7" step="0.01" value="0.35">
+            </div>
+            <div class="metric-list">
+                <div class="metric"><span>函数</span><strong>\\(x^2+y^2\\)</strong></div>
+                <div class="metric"><span>目标极限</span><strong>0</strong></div>
+            </div>
+        `,
+        html:String.raw`
+            <div class="lesson-grid">
+                <div class="lesson-block">
+                    <h3>极限存在</h3>
+                    <p>例如 \\(f(x,y)=x^2+y^2\\)。当 \\((x,y)\to(0,0)\\) 时，\\(0\le x^2+y^2=\|(x,y)\|^2\\)，所以函数值沿任意路径都趋向 0。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>极限不存在</h3>
+                    <p>对 \\(g(x,y)=\frac{x^2-y^2}{x^2+y^2}\\)，沿 \\(y=0\\) 得 1，沿 \\(x=0\\) 得 -1。两条路径结论不同，因此极限不存在。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>连续性</h3>
+                    <p>函数在点 \\((a,b)\\) 连续，需要函数值存在、极限存在，并且 \\(\lim f(x,y)=f(a,b)\\)。多项式、指数、三角函数的复合通常在定义域内连续。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>解题套路</h3>
+                    <ul>
+                        <li>先尝试估计：把表达式压到 \\(C\sqrt{x^2+y^2}\\) 或更高阶。</li>
+                        <li>若怀疑不存在，选直线、抛物线或极坐标路径。</li>
+                        <li>遇到 \\(x^2+y^2\\)，常用极坐标 \\(x=r\cos\theta,y=r\sin\theta\\)。</li>
+                    </ul>
+                </div>
+            </div>
+        `
+    },
+    derivative: {
+        category:"多元微分学",
+        title:"多元函数的导数与微分",
+        summary:"偏导数描述沿坐标轴方向的瞬时变化，梯度把所有一阶偏导合成最陡上升方向，全微分则给出函数在小范围内的最佳线性近似。",
+        formula:String.raw`\\( df=f_x(a,b)\,dx+f_y(a,b)\,dy,\quad \nabla f=(f_x,f_y),\quad D_{\mathbf u}f=\nabla f\cdot \mathbf u \\)`,
+        visualTitle:"曲面、切平面与梯度",
+        controls:String.raw`
+            <div class="control-row">
+                <label for="surfaceA">曲率 a <output id="surfaceAValue">1.0</output></label>
+                <input id="surfaceA" type="range" min="0.4" max="2.8" step="0.1" value="1">
+            </div>
+            <div class="control-row">
+                <label for="pointX">切点 x0 <output id="pointXValue">1.0</output></label>
+                <input id="pointX" type="range" min="-2.5" max="2.5" step="0.1" value="1">
+            </div>
+            <div class="control-row">
+                <label for="pointY">切点 y0 <output id="pointYValue">-1.0</output></label>
+                <input id="pointY" type="range" min="-2.5" max="2.5" step="0.1" value="-1">
+            </div>
+            <div class="metric-list">
+                <div class="metric"><span>梯度</span><strong id="gradMetric">(2,-2)</strong></div>
+                <div class="metric"><span>切平面</span><strong id="planeMetric">z=...</strong></div>
+            </div>
+        `,
+        html:String.raw`
+            <div class="lesson-grid">
+                <div class="lesson-block">
+                    <h3>偏导数</h3>
+                    <p>对 \\(f(x,y)=a(x^2+y^2)\\)，固定 \\(y\\) 对 \\(x\\) 求导得到 \\(f_x=2ax\\)，固定 \\(x\\) 对 \\(y\\) 求导得到 \\(f_y=2ay\\)。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>全微分例子</h3>
+                    <p>在 \\((1,-1)\\) 附近，若 \\(a=1\\)，则 \\(df=2dx-2dy\\)。当 \\(dx=0.02,dy=-0.01\\) 时，函数增量近似为 \\(0.06\\)。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>方向导数</h3>
+                    <p>单位方向 \\(\mathbf u=(\cos\theta,\sin\theta)\\) 上的变化率为 \\(\nabla f\cdot\mathbf u\\)。当方向与梯度同向时变化率最大，最大值是 \\(\|\nabla f\|\\)。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>几何图像</h3>
+                    <p>切平面是曲面在一点附近的线性替身。动画中半透明平面随切点移动，黄色点是切点，绿色线表示梯度投影。</p>
+                </div>
+            </div>
+        `
+    },
+    taylor: {
+        category:"多元微分学",
+        title:"泰勒公式与极值",
+        summary:"泰勒公式用多项式逼近函数；极值判别把一阶导数给出的驻点和二阶导数给出的弯曲方向结合起来。多元情形中，Hessian 矩阵承担二阶信息的角色。",
+        formula:String.raw`\\( f(a+h)=f(a)+\nabla f(a)\cdot h+\frac12 h^T H_f(a)h+o(\|h\|^2) \\)`,
+        visualTitle:"sin x 的泰勒多项式逼近",
+        controls:String.raw`
+            <div class="control-row">
+                <label for="taylorOrder">最高次数 <output id="taylorOrderValue">5</output></label>
+                <input id="taylorOrder" type="range" min="1" max="11" step="2" value="5">
+            </div>
+            <div class="control-row">
+                <label for="zoomRange">观察范围 <output id="zoomValue">π</output></label>
+                <input id="zoomRange" type="range" min="1.5" max="6.28" step="0.01" value="3.14">
+            </div>
+            <div class="metric-list">
+                <div class="metric"><span>目标函数</span><strong>sin x</strong></div>
+                <div class="metric"><span>展开点</span><strong>0</strong></div>
+            </div>
+        `,
+        html:String.raw`
+            <div class="lesson-grid">
+                <div class="lesson-block">
+                    <h3>一元泰勒</h3>
+                    <p>在 0 点，\\(\sin x=x-\frac{x^3}{3!}+\frac{x^5}{5!}-\cdots\\)。次数越高，展开点附近贴合越好，但离展开点很远时仍可能偏离。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>多元泰勒</h3>
+                    <p>二阶展开中，\\(\nabla f\\) 控制线性变化，Hessian \\(H_f\\) 控制弯曲。它是判断极值、鞍点和局部形状的核心工具。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>极值例子</h3>
+                    <p>\\(f(x,y)=x^2+y^2\\) 在 \\((0,0)\\) 处梯度为 0，Hessian 为 \\(\begin{pmatrix}2&0\\0&2\end{pmatrix}\\)，正定，所以有局部最小值。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>鞍点例子</h3>
+                    <p>\\(f(x,y)=x^2-y^2\\) 在原点梯度也为 0，但沿 \\(x\\) 轴函数增大，沿 \\(y\\) 轴函数减小，因此原点是鞍点。</p>
+                </div>
+            </div>
+        `
+    },
+    double: {
+        category:"多元积分学",
+        title:"二重积分",
+        summary:"二重积分把平面区域切成许多小块，在每块上用函数值乘以面积再求和。它可以表示曲面下体积、平面薄片质量、概率密度总量等。",
+        formula:String.raw`\\( \iint_D f(x,y)\,dA=\lim_{\lambda\to0}\sum f(\xi_i,\eta_i)\Delta A_i \\)`,
+        visualTitle:"Riemann 小柱逼近曲面体积",
+        controls:String.raw`
+            <div class="control-row">
+                <label for="doubleGrid">分割数 <output id="doubleGridValue">12</output></label>
+                <input id="doubleGrid" type="range" min="5" max="24" step="1" value="12">
+            </div>
+            <div class="control-row">
+                <label for="heightScale">高度系数 <output id="heightScaleValue">1.0</output></label>
+                <input id="heightScale" type="range" min="0.5" max="1.8" step="0.1" value="1">
+            </div>
+            <div class="metric-list">
+                <div class="metric"><span>积分近似</span><strong id="integralMetric">0</strong></div>
+                <div class="metric"><span>区域</span><strong>[-π,π]²</strong></div>
+            </div>
+        `,
+        html:String.raw`
+            <div class="lesson-grid">
+                <div class="lesson-block">
+                    <h3>几何意义</h3>
+                    <p>当 \\(f(x,y)\ge0\\) 时，\\(\iint_D f(x,y)dA\\) 是区域 \\(D\\) 上方、曲面下方的体积。动画中的小柱越密，近似越细。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>直接计算例子</h3>
+                    <p>若 \\(D=[0,1]\times[0,2]\\)，\\(f=x+y\\)，则 \\(\int_0^1\int_0^2(x+y)\,dy\,dx=\int_0^1(2x+2)\,dx=3\\)。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>换序积分</h3>
+                    <p>若区域由 \\(0\le y\le x\le1\\) 给出，也可写为 \\(0\le y\le1,\ y\le x\le1\\)。换序的关键是先画区域，再读边界。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>变量替换</h3>
+                    <p>圆形区域常用极坐标：\\(x=r\cos\theta,y=r\sin\theta\\)，面积元变为 \\(dA=r\,dr\,d\theta\\)。这个额外的 \\(r\\) 来自雅可比行列式。</p>
+                </div>
+            </div>
+        `
+    },
+    triple: {
+        category:"多元积分学",
+        title:"三重积分",
+        summary:"三重积分把空间区域切成小体积元，用函数值乘以体积再求和。它常用于计算体积、质量、质心、转动惯量和空间概率。",
+        formula:String.raw`\\( \iiint_\Omega f(x,y,z)\,dV,\quad dV=dx\,dy\,dz=r\,dr\,d\theta\,dz=\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta \\)`,
+        visualTitle:"球体水平切片与体积",
+        controls:String.raw`
+            <div class="control-row">
+                <label for="sphereRadius">半径 R <output id="sphereRadiusValue">2.0</output></label>
+                <input id="sphereRadius" type="range" min="1" max="3" step="0.1" value="2">
+            </div>
+            <div class="control-row">
+                <label for="sliceZ">切片 z <output id="sliceZValue">0.0</output></label>
+                <input id="sliceZ" type="range" min="-2" max="2" step="0.1" value="0">
+            </div>
+            <div class="metric-list">
+                <div class="metric"><span>切片面积</span><strong id="sliceMetric">0</strong></div>
+                <div class="metric"><span>球体体积</span><strong id="volumeMetric">0</strong></div>
+            </div>
+        `,
+        html:String.raw`
+            <div class="lesson-grid">
+                <div class="lesson-block">
+                    <h3>体积计算</h3>
+                    <p>对半径为 \\(R\\) 的球，使用球坐标可得 \\(V=\int_0^{2\pi}\int_0^\pi\int_0^R\rho^2\sin\varphi\,d\rho\,d\varphi\,d\theta=\frac43\pi R^3\\)。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>切片思想</h3>
+                    <p>在高度 \\(z\\) 处，球的截面半径为 \\(\sqrt{R^2-z^2}\\)，截面积为 \\(\pi(R^2-z^2)\\)。把这些截面积沿 \\(z\\) 积分就得到体积。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>柱坐标例子</h3>
+                    <p>圆柱 \\(x^2+y^2\le4,0\le z\le3\\) 的体积是 \\(\int_0^{2\pi}\int_0^2\int_0^3 r\,dz\,dr\,d\theta=12\pi\\)。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>物理意义</h3>
+                    <p>若密度为 \\(\rho(x,y,z)\\)，质量为 \\(\iiint_\Omega \rho\,dV\\)。如果密度常数为 1，三重积分就退化为区域体积。</p>
+                </div>
+            </div>
+        `
+    },
+    fourier: {
+        category:"无穷级数",
+        title:"傅立叶级数",
+        summary:"傅立叶级数用正弦和余弦叠加来表示周期函数。它把函数拆成频率成分，是信号处理、热方程、波动方程和图像压缩的基础语言。",
+        formula:String.raw`\\( f(x)\sim \frac{a_0}{2}+\sum_{n=1}^{\infty}(a_n\cos nx+b_n\sin nx) \\)`,
+        visualTitle:"方波的傅立叶部分和",
+        controls:String.raw`
+            <div class="control-row">
+                <label for="fourierTerms">项数 N <output id="fourierTermsValue">7</output></label>
+                <input id="fourierTerms" type="range" min="1" max="35" step="1" value="7">
+            </div>
+            <div class="control-row">
+                <label for="phaseRange">相位 <output id="phaseValue">0.0</output></label>
+                <input id="phaseRange" type="range" min="-3.14" max="3.14" step="0.01" value="0">
+            </div>
+            <div class="metric-list">
+                <div class="metric"><span>目标函数</span><strong>方波</strong></div>
+                <div class="metric"><span>现象</span><strong>Gibbs</strong></div>
+            </div>
+        `,
+        html:String.raw`
+            <div class="lesson-grid">
+                <div class="lesson-block">
+                    <h3>方波展开</h3>
+                    <p>周期 \\(2\pi\\) 的方波可写成 \\(\frac4\pi(\sin x+\frac13\sin3x+\frac15\sin5x+\cdots)\\)。只含奇数次正弦项。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>系数含义</h3>
+                    <p>\\(a_n,b_n\\) 是函数在对应频率上的投影，类似把一个向量分解到一组互相垂直的基上。正交性让各个频率互不干扰。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>收敛特点</h3>
+                    <p>在连续点，傅立叶级数收敛到函数值；在跳跃间断点，收敛到左右极限的平均值。方波边缘附近会出现 Gibbs 过冲。</p>
+                </div>
+                <div class="lesson-block">
+                    <h3>应用例子</h3>
+                    <p>热传导问题中，初始温度分布可以展开成傅立叶级数，每个频率随时间按不同速度衰减，从而得到温度随时间变化的解。</p>
+                </div>
+            </div>
+        `
+    }
+};
+
+const content = document.getElementById("content");
+const assistantContext = document.getElementById("assistantContext");
+const chatLog = document.getElementById("chatLog");
+const apiStatus = document.getElementById("apiStatus");
+let currentPage = null;
+let activeDemo = {frame:0, cleanup:null};
+let bgRenderer = null;
+let bgScene = null;
+let bgCamera = null;
+let starField = null;
+
+function enterSystem(){
+    document.body.classList.add("system-on");
+    if(!currentPage) loadPage("Rn");
+}
+
+function showWelcome(){
+    currentPage = null;
+    stopDemo();
+    assistantContext.textContent = "当前章节：欢迎页";
+    content.innerHTML = `
+        <article class="topic-page">
+            <header class="topic-head">
+                <div class="topic-kicker">学习入口</div>
+                <h2>欢迎来到数学分析学习舱</h2>
+                <p>左侧七个章节均已补齐内容与动态演示。你可以从 Rn 空间开始，也可以直接进入积分或傅立叶级数。</p>
+            </header>
+            <div class="welcome-grid">
+                ${Object.entries(pages).map(([key,page]) => `
+                    <button class="welcome-tile" type="button" data-page="${key}">
+                        <strong>${page.title}</strong>
+                        <span>${page.summary.slice(0,58)}...</span>
+                    </button>
+                `).join("")}
+            </div>
+        </article>
+    `;
+    content.querySelectorAll("[data-page]").forEach(btn => {
+        btn.addEventListener("click", () => loadPage(btn.dataset.page));
+    });
+    setActiveMenu("");
+}
+
+function loadPage(type){
+    const page = pages[type];
+    if(!page) return;
+    currentPage = type;
+    stopDemo();
+    setActiveMenu(type);
+    assistantContext.textContent = `当前章节：${page.title}`;
+    content.innerHTML = `
+        <article class="topic-page">
+            <header class="topic-head">
+                <div class="topic-kicker">${page.category}</div>
+                <h2>${page.title}</h2>
+                <p>${page.summary}</p>
+                <div class="formula-strip">${normalizeTex(page.formula)}</div>
+            </header>
+            ${normalizeTex(page.html)}
+            <section class="demo-shell" aria-label="${page.visualTitle}">
+                <div class="demo-top">
+                    <strong>${page.visualTitle}</strong>
+                    <span class="demo-status" id="demoStatus">演示载入中...</span>
+                </div>
+                <div class="demo-body">
+                    <canvas class="visual-canvas" id="visualCanvas"></canvas>
+                    <aside class="control-panel">${normalizeTex(page.controls)}</aside>
+                </div>
+            </section>
+        </article>
+    `;
+    typesetMath();
+    startDemo(type);
+}
+
+function normalizeTex(html){
+    return html.replace(/\\\\/g, "\\");
+}
+
+function setActiveMenu(type){
+    document.querySelectorAll(".menu-item").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.page === type);
+    });
+}
+
+function typesetMath(){
+    if(window.MathJax && MathJax.typesetPromise){
+        MathJax.typesetPromise([content, document.querySelector(".assistant")]).catch(() => {});
+    }
+}
+
+function stopDemo(){
+    if(activeDemo.frame) cancelAnimationFrame(activeDemo.frame);
+    if(activeDemo.cleanup) activeDemo.cleanup();
+    activeDemo = {frame:0, cleanup:null};
+}
+
+function fitCanvas(canvas){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const width = Math.max(320, rect.width);
+    const height = Math.max(260, rect.height);
+    const targetW = Math.floor(width * dpr);
+    const targetH = Math.floor(height * dpr);
+    if(canvas.width !== targetW || canvas.height !== targetH){
+        canvas.width = targetW;
+        canvas.height = targetH;
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx,w:width,h:height};
+}
+
+function clearCanvas(ctx,w,h){
+    ctx.clearRect(0,0,w,h);
+    const grad = ctx.createRadialGradient(w*0.5,h*0.45,20,w*0.5,h*0.45,Math.max(w,h)*0.75);
+    grad.addColorStop(0,"rgba(35,216,255,0.12)");
+    grad.addColorStop(1,"rgba(1,4,10,0.82)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle = "rgba(154,232,255,0.08)";
+    ctx.lineWidth = 1;
+    for(let x=0;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+    for(let y=0;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+}
+
+function startDemo(type){
+    const canvas = document.getElementById("visualCanvas");
+    if(!canvas) return;
+    const starters = {
+        Rn:startRnDemo,
+        limit:startLimitDemo,
+        derivative:startDerivativeDemo,
+        taylor:startTaylorDemo,
+        double:startDoubleDemo,
+        triple:startTripleDemo,
+        fourier:startFourierDemo
+    };
+    starters[type](canvas);
+}
+
+function bindRange(id, outputId, formatter, onChange){
+    const input = document.getElementById(id);
+    const output = document.getElementById(outputId);
+    const update = () => {
+        const value = Number(input.value);
+        output.textContent = formatter ? formatter(value) : value;
+        onChange(value);
+    };
+    input.addEventListener("input", update);
+    update();
+    return input;
+}
+
+function drawArrow(ctx,x1,y1,x2,y2,color){
+    const angle = Math.atan2(y2-y1,x2-x1);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-10*Math.cos(angle-.45), y2-10*Math.sin(angle-.45));
+    ctx.lineTo(x2-10*Math.cos(angle+.45), y2-10*Math.sin(angle+.45));
+    ctx.closePath();
+    ctx.fill();
+}
+
+function startRnDemo(canvas){
+    let dim = 4;
+    bindRange("dimRange","dimValue",v => String(v), v => dim = v);
+    const status = document.getElementById("demoStatus");
+    const normMetric = document.getElementById("normMetric");
+    const coordMetric = document.getElementById("coordMetric");
+    let t = 0;
+    function loop(){
+        const {ctx,w,h} = fitCanvas(canvas);
+        clearCanvas(ctx,w,h);
+        const cx = w*0.36;
+        const cy = h*0.52;
+        const scale = Math.min(w,h)*0.2;
+        ctx.strokeStyle = "rgba(233,251,255,0.38)";
+        ctx.lineWidth = 1.4;
+        drawArrow(ctx,cx-scale*1.25,cy,cx+scale*1.35,cy,"rgba(233,251,255,0.65)");
+        drawArrow(ctx,cx,cy+scale*1.15,cx,cy-scale*1.25,"rgba(233,251,255,0.65)");
+        ctx.fillStyle = "rgba(233,251,255,0.86)";
+        ctx.fillText("x1",cx+scale*1.4,cy-8);
+        ctx.fillText("x2",cx+8,cy-scale*1.28);
+
+        const coords = Array.from({length:dim}, (_,i) => 1.2*Math.sin(t*0.018 + i*1.13) + 0.55*Math.cos(t*0.011 + i));
+        const norm = Math.sqrt(coords.reduce((sum,v) => sum + v*v, 0));
+        const px = cx + coords[0]*scale*0.48;
+        const py = cy - coords[1]*scale*0.48;
+        drawArrow(ctx,cx,cy,px,py,"#23d8ff");
+        ctx.fillStyle = "#ffd166";
+        ctx.beginPath();
+        ctx.arc(px,py,7,0,Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,209,102,0.32)";
+        ctx.beginPath();
+        ctx.arc(cx,cy,norm*scale*0.25,0,Math.PI*2);
+        ctx.stroke();
+
+        const baseX = w*0.62;
+        const baseY = h*0.22;
+        ctx.font = "14px Microsoft YaHei";
+        coords.forEach((value,i) => {
+            const y = baseY + i*36;
+            const barW = value * 42;
+            ctx.fillStyle = "rgba(255,255,255,0.08)";
+            ctx.fillRect(baseX-70,y,140,12);
+            ctx.fillStyle = i%3===0 ? "#58f2a7" : i%3===1 ? "#23d8ff" : "#ffd166";
+            ctx.fillRect(baseX,y,barW,12);
+            ctx.fillStyle = "#c4d8df";
+            ctx.fillText(`x${i+1} = ${value.toFixed(2)}`,baseX+84,y+11);
+        });
+        normMetric.textContent = norm.toFixed(3);
+        coordMetric.textContent = `(${coords[0].toFixed(2)}, ${coords[1].toFixed(2)})`;
+        status.textContent = `${dim} 维向量正在投影到前两个坐标轴，圆圈半径随范数变化。`;
+        t += 1;
+        activeDemo.frame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function startLimitDemo(canvas){
+    let speed = 1;
+    let eps = 0.35;
+    bindRange("limitSpeed","limitSpeedValue",v => v.toFixed(1), v => speed = v);
+    bindRange("epsilonRange","epsilonValue",v => v.toFixed(2), v => eps = v);
+    const status = document.getElementById("demoStatus");
+    let t = 0;
+    function map(cx,cy,scale,x,y){return [cx+x*scale, cy-y*scale];}
+    function loop(){
+        const {ctx,w,h} = fitCanvas(canvas);
+        clearCanvas(ctx,w,h);
+        const cx = w/2;
+        const cy = h/2;
+        const scale = Math.min(w,h)*0.28;
+        for(let r=0.25;r<=1.5;r+=0.25){
+            ctx.strokeStyle = r < eps ? "rgba(255,209,102,0.5)" : "rgba(35,216,255,0.18)";
+            ctx.beginPath();
+            ctx.arc(cx,cy,r*scale,0,Math.PI*2);
+            ctx.stroke();
+        }
+        drawArrow(ctx,cx-scale*1.55,cy,cx+scale*1.65,cy,"rgba(233,251,255,0.5)");
+        drawArrow(ctx,cx,cy+scale*1.35,cx,cy-scale*1.45,"rgba(233,251,255,0.5)");
+        const progress = (Math.sin(t*0.012*speed)+1)/2;
+        const r = 1.45 - progress*1.34;
+        const paths = [
+            {name:"直线", color:"#23d8ff", point:[r, 0.55*r]},
+            {name:"抛物线", color:"#ffd166", point:[r, 0.7*r*r]},
+            {name:"螺旋", color:"#58f2a7", point:[r*Math.cos(t*0.05), r*Math.sin(t*0.05)]}
+        ];
+        paths.forEach(path => {
+            ctx.strokeStyle = path.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let i=0;i<80;i++){
+                const rr = 1.45 - i/79*1.34;
+                let x,y;
+                if(path.name === "直线"){x=rr;y=.55*rr;}
+                if(path.name === "抛物线"){x=rr;y=.7*rr*rr;}
+                if(path.name === "螺旋"){x=rr*Math.cos(i*.23);y=rr*Math.sin(i*.23);}
+                const [px,py] = map(cx,cy,scale,x,y);
+                if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+            }
+            ctx.stroke();
+            const [px,py] = map(cx,cy,scale,path.point[0],path.point[1]);
+            ctx.fillStyle = path.color;
+            ctx.beginPath();
+            ctx.arc(px,py,6,0,Math.PI*2);
+            ctx.fill();
+        });
+        ctx.fillStyle = "#ff6b7f";
+        ctx.beginPath();
+        ctx.arc(cx,cy,6,0,Math.PI*2);
+        ctx.fill();
+        const fValue = r*r;
+        status.textContent = `三条路径同时靠近原点，当前 f=x²+y² 量级约为 ${fValue.toFixed(3)}。`;
+        t += 1;
+        activeDemo.frame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function startDerivativeDemo(canvas){
+    const status = document.getElementById("demoStatus");
+    let state = {a:1,x:1,y:-1};
+
+    if(!window.THREE){
+        bindRange("surfaceA","surfaceAValue",v => v.toFixed(1), v => state.a = v);
+        bindRange("pointX","pointXValue",v => v.toFixed(1), v => state.x = v);
+        bindRange("pointY","pointYValue",v => v.toFixed(1), v => state.y = v);
+        startDerivativeFallback(canvas,state);
+        return;
+    }
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(48,1,0.1,100);
+    const renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    camera.position.set(7,-8,6);
+    camera.lookAt(0,0,1.4);
+    const group = new THREE.Group();
+    scene.add(group);
+    scene.add(new THREE.AmbientLight(0xffffff,0.9));
+    const light = new THREE.DirectionalLight(0xffffff,1.1);
+    light.position.set(5,-6,8);
+    scene.add(light);
+    const surfaceGeom = new THREE.PlaneGeometry(7,7,72,72);
+    const surfaceMat = new THREE.MeshBasicMaterial({color:0x23d8ff,wireframe:true,transparent:true,opacity:0.72});
+    const surface = new THREE.Mesh(surfaceGeom,surfaceMat);
+    group.add(surface);
+    const tangentGeom = new THREE.PlaneGeometry(3.2,3.2,12,12);
+    const tangentMat = new THREE.MeshBasicMaterial({color:0xffd166,wireframe:true,transparent:true,opacity:0.86});
+    const tangent = new THREE.Mesh(tangentGeom,tangentMat);
+    group.add(tangent);
+    const point = new THREE.Mesh(new THREE.SphereGeometry(0.11,20,20), new THREE.MeshBasicMaterial({color:0xff6b7f}));
+    group.add(point);
+    const gradGeom = new THREE.BufferGeometry();
+    const gradLine = new THREE.Line(gradGeom, new THREE.LineBasicMaterial({color:0x58f2a7,linewidth:3}));
+    group.add(gradLine);
+    const axes = makeAxes();
+    group.add(axes);
+
+    function zOf(x,y){return state.a*(x*x+y*y)/10;}
+    function updateScene(){
+        const pos = surface.geometry.attributes.position;
+        for(let i=0;i<pos.count;i++){
+            const x = pos.getX(i);
+            const y = pos.getY(i);
+            pos.setZ(i,zOf(x,y));
+        }
+        pos.needsUpdate = true;
+        surface.geometry.computeVertexNormals();
+        const fx = state.a*state.x/5;
+        const fy = state.a*state.y/5;
+        const z0 = zOf(state.x,state.y);
+        const tPos = tangent.geometry.attributes.position;
+        for(let i=0;i<tPos.count;i++){
+            const localX = tPos.getX(i);
+            const localY = tPos.getY(i);
+            const wx = state.x + localX;
+            const wy = state.y + localY;
+            const wz = z0 + fx*localX + fy*localY;
+            tPos.setXYZ(i,wx,wy,wz);
+        }
+        tPos.needsUpdate = true;
+        point.position.set(state.x,state.y,z0);
+        const gradScale = 1.2 / Math.max(1, Math.hypot(fx,fy));
+        gradGeom.setFromPoints([
+            new THREE.Vector3(state.x,state.y,z0+0.03),
+            new THREE.Vector3(state.x+fx*gradScale,state.y+fy*gradScale,z0+0.03)
+        ]);
+        const gradX = 2*state.a*state.x;
+        const gradY = 2*state.a*state.y;
+        document.getElementById("gradMetric").textContent = `(${gradX.toFixed(1)}, ${gradY.toFixed(1)})`;
+        document.getElementById("planeMetric").textContent = `z≈${z0.toFixed(2)}+${fx.toFixed(2)}dx+${fy.toFixed(2)}dy`;
+        status.textContent = `切点 (${state.x.toFixed(1)}, ${state.y.toFixed(1)}) 的切平面正在贴合曲面。`;
+    }
+    function makeAxes(){
+        const axesGroup = new THREE.Group();
+        const matX = new THREE.LineBasicMaterial({color:0xff6b7f});
+        const matY = new THREE.LineBasicMaterial({color:0x58f2a7});
+        const matZ = new THREE.LineBasicMaterial({color:0xffffff});
+        axesGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-4,0,0),new THREE.Vector3(4,0,0)]),matX));
+        axesGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-4,0),new THREE.Vector3(0,4,0)]),matY));
+        axesGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,3.4)]),matZ));
+        return axesGroup;
+    }
+    function resizeRenderer(){
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(320,rect.width);
+        const height = Math.max(260,rect.height);
+        renderer.setSize(width,height,false);
+        camera.aspect = width/height;
+        camera.updateProjectionMatrix();
+    }
+    let tick = 0;
+    function animate(){
+        resizeRenderer();
+        group.rotation.z = Math.sin(tick*0.006)*0.12;
+        renderer.render(scene,camera);
+        tick++;
+        activeDemo.frame = requestAnimationFrame(animate);
+    }
+    bindRange("surfaceA","surfaceAValue",v => v.toFixed(1), v => {state.a=v; updateScene();});
+    bindRange("pointX","pointXValue",v => v.toFixed(1), v => {state.x=v; updateScene();});
+    bindRange("pointY","pointYValue",v => v.toFixed(1), v => {state.y=v; updateScene();});
+    updateScene();
+    animate();
+    activeDemo.cleanup = () => {
+        renderer.dispose();
+        surfaceGeom.dispose();
+        tangentGeom.dispose();
+        surfaceMat.dispose();
+        tangentMat.dispose();
+    };
+}
+
+function startDerivativeFallback(canvas,state){
+    const status = document.getElementById("demoStatus");
+    function loop(){
+        const {ctx,w,h} = fitCanvas(canvas);
+        clearCanvas(ctx,w,h);
+        const cx = w/2;
+        const cy = h*0.62;
+        const scale = Math.min(w,h)*0.16;
+        for(let y=-3;y<=3;y+=0.5){
+            ctx.beginPath();
+            for(let x=-3;x<=3;x+=0.1){
+                const z = state.a*(x*x+y*y)/10;
+                const px = cx + (x-y)*scale;
+                const py = cy + (x+y)*scale*.32 - z*scale*2.1;
+                if(x===-3) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+            }
+            ctx.strokeStyle = "rgba(35,216,255,0.55)";
+            ctx.stroke();
+        }
+        status.textContent = "Three.js 未载入，已切换为 2D 曲面投影。";
+        activeDemo.frame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function startTaylorDemo(canvas){
+    let order = 5;
+    let zoom = Math.PI;
+    bindRange("taylorOrder","taylorOrderValue",v => String(v), v => order = v);
+    bindRange("zoomRange","zoomValue",v => v >= 3.13 && v <= 3.15 ? "π" : v.toFixed(2), v => zoom = v);
+    const status = document.getElementById("demoStatus");
+    function factorial(n){let r=1;for(let i=2;i<=n;i++) r*=i;return r;}
+    function taylor(x){
+        let sum = 0;
+        for(let k=0;k<=Math.floor((order-1)/2);k++){
+            const n = 2*k+1;
+            sum += (k%2===0 ? 1 : -1) * Math.pow(x,n)/factorial(n);
+        }
+        return sum;
+    }
+    function drawFunction(ctx,w,h,fn,color,width,phase){
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        for(let i=0;i<=w;i++){
+            const x = (i/w*2-1)*zoom;
+            const y = fn(x);
+            const px = i;
+            const py = h/2 - y*h*0.28 + Math.sin(i*.02+phase)*0.4;
+            if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+    }
+    let t = 0;
+    function loop(){
+        const {ctx,w,h} = fitCanvas(canvas);
+        clearCanvas(ctx,w,h);
+        drawArrow(ctx,32,h/2,w-28,h/2,"rgba(233,251,255,0.45)");
+        drawArrow(ctx,w/2,h-30,w/2,28,"rgba(233,251,255,0.45)");
+        drawFunction(ctx,w,h,Math.sin,"#23d8ff",2.5,t*.02);
+        drawFunction(ctx,w,h,taylor,"#ffd166",2.5,-t*.015);
+        ctx.fillStyle = "#c4d8df";
+        ctx.fillText("蓝色：sin x",36,34);
+        ctx.fillStyle = "#ffd166";
+        ctx.fillText(`黄色：${order} 次泰勒多项式`,36,56);
+        const probe = Math.min(zoom, Math.PI/2);
+        const error = Math.abs(Math.sin(probe)-taylor(probe));
+        status.textContent = `在 x≈${probe.toFixed(2)} 处，当前近似误差约 ${error.toExponential(2)}。`;
+        t++;
+        activeDemo.frame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function startDoubleDemo(canvas){
+    let grid = 12;
+    let heightScale = 1;
+    bindRange("doubleGrid","doubleGridValue",v => String(v), v => grid = v);
+    bindRange("heightScale","heightScaleValue",v => v.toFixed(1), v => heightScale = v);
+    const status = document.getElementById("demoStatus");
+    const metric = document.getElementById("integralMetric");
+    let t = 0;
+    function f(x,y){return 1 + 0.35*Math.sin(2*x+t*0.012)*Math.cos(1.5*y);}
+    function iso(cx,cy,x,y,z,scale){
+        return [cx + (x-y)*scale, cy + (x+y)*scale*0.38 - z*scale*1.7];
+    }
+    function loop(){
+        const {ctx,w,h} = fitCanvas(canvas);
+        clearCanvas(ctx,w,h);
+        const cx = w/2;
+        const cy = h*0.68;
+        const scale = Math.min(w,h)/(grid*2.35);
+        let sum = 0;
+        const cells = [];
+        for(let i=0;i<grid;i++){
+            for(let j=0;j<grid;j++){
+                const x = -Math.PI + (i+.5)/grid*2*Math.PI;
+                const y = -Math.PI + (j+.5)/grid*2*Math.PI;
+                const z = f(x,y)*heightScale;
+                sum += z;
+                cells.push({i,j,z});
+            }
+        }
+        cells.sort((a,b) => (a.i+a.j)-(b.i+b.j));
+        cells.forEach(cell => {
+            const x = cell.i-grid/2;
+            const y = cell.j-grid/2;
+            const z = cell.z;
+            const [px,py] = iso(cx,cy,x,y,z,scale);
+            const color = Math.min(1, Math.max(0, (z-.65)/.8));
+            ctx.fillStyle = `rgba(${Math.round(35+220*color)},${Math.round(180+40*color)},${Math.round(255-150*color)},0.62)`;
+            ctx.strokeStyle = "rgba(233,251,255,0.18)";
+            ctx.fillRect(px-scale*.42,py,scale*.84,z*scale*1.65);
+            ctx.strokeRect(px-scale*.42,py,scale*.84,z*scale*1.65);
+        });
+        const area = Math.pow(2*Math.PI,2);
+        const approx = sum/(grid*grid)*area;
+        metric.textContent = approx.toFixed(2);
+        status.textContent = `${grid}×${grid} 个小柱正在逼近曲面下的体积。`;
+        t++;
+        activeDemo.frame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function startTripleDemo(canvas){
+    let radius = 2;
+    let sliceZ = 0;
+    const sliceInput = document.getElementById("sliceZ");
+    bindRange("sphereRadius","sphereRadiusValue",v => v.toFixed(1), v => {
+        radius = v;
+        sliceInput.min = (-radius).toFixed(1);
+        sliceInput.max = radius.toFixed(1);
+        if(Math.abs(sliceZ) > radius){
+            sliceZ = 0;
+            sliceInput.value = "0";
+        }
+    });
+    bindRange("sliceZ","sliceZValue",v => v.toFixed(1), v => sliceZ = v);
+    const status = document.getElementById("demoStatus");
+    const sliceMetric = document.getElementById("sliceMetric");
+    const volumeMetric = document.getElementById("volumeMetric");
+    let t = 0;
+    function loop(){
+        const {ctx,w,h} = fitCanvas(canvas);
+        clearCanvas(ctx,w,h);
+        const cx = w*0.45;
+        const cy = h*0.54;
+        const scale = Math.min(w,h)*0.16;
+        for(let k=-10;k<=10;k++){
+            const z = k/10*radius;
+            const rr = Math.sqrt(Math.max(0,radius*radius-z*z));
+            const y = cy - z*scale*0.7;
+            ctx.strokeStyle = `rgba(35,216,255,${0.12+0.22*(1-Math.abs(k)/10)})`;
+            ctx.beginPath();
+            ctx.ellipse(cx,y,rr*scale,rr*scale*0.32,0,0,Math.PI*2);
+            ctx.stroke();
+        }
+        const sectionR = Math.sqrt(Math.max(0,radius*radius-sliceZ*sliceZ));
+        const sy = cy - sliceZ*scale*0.7;
+        ctx.fillStyle = "rgba(255,209,102,0.22)";
+        ctx.strokeStyle = "#ffd166";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(cx,sy,sectionR*scale,sectionR*scale*0.32,0,0,Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255,107,127,0.75)";
+        ctx.beginPath();
+        ctx.moveTo(cx+sectionR*scale+22,sy);
+        ctx.lineTo(cx+sectionR*scale+90,sy);
+        ctx.stroke();
+        ctx.fillStyle = "#ffccd4";
+        ctx.fillText(`z=${sliceZ.toFixed(1)}`,cx+sectionR*scale+96,sy+4);
+        const area = Math.PI*sectionR*sectionR;
+        const volume = 4/3*Math.PI*Math.pow(radius,3);
+        sliceMetric.textContent = area.toFixed(2);
+        volumeMetric.textContent = volume.toFixed(2);
+        status.textContent = `当前水平截面半径为 ${sectionR.toFixed(2)}，面积为 π(R²-z²)。`;
+        t++;
+        activeDemo.frame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function startFourierDemo(canvas){
+    let terms = 7;
+    let phase = 0;
+    bindRange("fourierTerms","fourierTermsValue",v => String(v), v => terms = v);
+    bindRange("phaseRange","phaseValue",v => v.toFixed(1), v => phase = v);
+    const status = document.getElementById("demoStatus");
+    function square(x){return Math.sin(x) >= 0 ? 1 : -1;}
+    function partial(x){
+        let sum = 0;
+        for(let k=0;k<terms;k++){
+            const n = 2*k+1;
+            sum += Math.sin(n*x)/n;
+        }
+        return 4/Math.PI*sum;
+    }
+    function draw(ctx,w,h,fn,color,lineWidth,offset){
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        for(let i=0;i<=w;i++){
+            const x = (i/w*2-1)*Math.PI*2 + phase;
+            const y = fn(x);
+            const px = i;
+            const py = h/2 - y*h*0.25 + Math.sin(i*.018+offset)*0.25;
+            if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+    }
+    let t = 0;
+    function loop(){
+        const {ctx,w,h} = fitCanvas(canvas);
+        clearCanvas(ctx,w,h);
+        drawArrow(ctx,28,h/2,w-28,h/2,"rgba(233,251,255,0.45)");
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.beginPath();
+        ctx.moveTo(0,h*0.25);ctx.lineTo(w,h*0.25);
+        ctx.moveTo(0,h*0.75);ctx.lineTo(w,h*0.75);
+        ctx.stroke();
+        draw(ctx,w,h,square,"rgba(233,251,255,0.46)",2,t*.02);
+        draw(ctx,w,h,partial,"#ffd166",2.6,-t*.02);
+        ctx.fillStyle = "#c4d8df";
+        ctx.fillText("灰白：目标方波",34,34);
+        ctx.fillStyle = "#ffd166";
+        ctx.fillText(`黄色：${terms} 项部分和`,34,56);
+        status.textContent = `项数增加时逼近更细，但跳跃点附近仍会出现 Gibbs 过冲。`;
+        t++;
+        activeDemo.frame = requestAnimationFrame(loop);
+    }
+    loop();
+}
+
+function addBubble(kind, html){
+    const div = document.createElement("div");
+    div.className = `bubble ${kind}`;
+    div.innerHTML = kind === "ai" ? normalizeTex(html) : html;
+    chatLog.appendChild(div);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    typesetAssistant();
+    return div;
+}
+
+function updateBubble(div, html){
+    div.classList.remove("pending");
+    div.innerHTML = normalizeTex(html);
+    chatLog.scrollTop = chatLog.scrollHeight;
+    typesetAssistant();
+}
+
+function typesetAssistant(){
+    if(window.MathJax && MathJax.typesetPromise){
+        MathJax.typesetPromise([chatLog]).catch(() => {});
+    }
+}
+
+function escapeHtml(text){
+    return text.replace(/[&<>"']/g, ch => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        "\"":"&quot;",
+        "'":"&#039;"
+    })[ch]);
+}
+
+function getDeepSeekBase(){
+    if(location.protocol === "http:" || location.protocol === "https:") return "";
+    return "http://127.0.0.1:8787";
+}
+
+function setApiStatus(state, text){
+    apiStatus.className = `api-status ${state}`;
+    apiStatus.textContent = text;
+}
+
+async function checkDeepSeekStatus(){
+    try{
+        const res = await fetch(`${getDeepSeekBase()}/api/deepseek/status`, {cache:"no-store"});
+        if(!res.ok) throw new Error("status error");
+        const data = await res.json();
+        if(data.ready){
+            setApiStatus("online", `DeepSeek V4 Flash 已连接`);
+        }else{
+            setApiStatus("offline", "DeepSeek 未配置 API Key");
+        }
+    }catch(error){
+        setApiStatus("offline", "DeepSeek 本地代理未启动");
+    }
+}
+
+function buildDeepSeekMessages(question){
+    const page = currentPage ? pages[currentPage] : null;
+    const context = page ? [
+        `当前章节：${page.title}`,
+        `章节分类：${page.category}`,
+        `章节摘要：${page.summary}`,
+        `核心公式：${normalizeTex(page.formula)}`,
+        "回答时优先围绕当前章节解释；需要时给出步骤清晰的例题。"
+    ].join("\n") : "当前在欢迎页。回答时可以引导用户选择数学分析章节。";
+    return [
+        {
+            role:"system",
+            content:"你是一个中文数学分析学习助手。回答要准确、简洁、有步骤；公式可用 LaTeX；不要编造定理条件；若用户问课件页面相关问题，结合提供的当前页面上下文。"
+        },
+        {
+            role:"user",
+            content:`${context}\n\n学生问题：${question}`
+        }
+    ];
+}
+
+function formatAssistantText(text){
+    return escapeHtml(text).replace(/\n/g,"<br>");
+}
+
+async function askDeepSeek(question){
+    const res = await fetch(`${getDeepSeekBase()}/api/deepseek`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:buildDeepSeekMessages(question)})
+    });
+    if(!res.ok){
+        let message = `DeepSeek 请求失败：HTTP ${res.status}`;
+        try{
+            const data = await res.json();
+            if(data.error) message = data.error;
+        }catch(error){}
+        throw new Error(message);
+    }
+    const data = await res.json();
+    return data.answer || "DeepSeek 返回为空。";
+}
+
+async function handleAssistantQuestion(text){
+    addBubble("user", escapeHtml(text));
+    const pending = addBubble("ai pending", "正在请求 DeepSeek V4 Flash...");
+    try{
+        const answer = await askDeepSeek(text);
+        setApiStatus("online", "DeepSeek V4 Flash 已连接");
+        updateBubble(pending, formatAssistantText(answer));
+    }catch(error){
+        setApiStatus("error", "DeepSeek 不可用，已用本地助手回答");
+        updateBubble(pending, `${formatAssistantText(error.message)}<br><br><strong>本地助手回答：</strong><br>${answerQuestion(text)}`);
+    }
+}
+
+function answerQuestion(question){
+    const q = question.toLowerCase();
+    const page = currentPage ? pages[currentPage] : null;
+    const banks = [
+        {keys:["rn","r^n","向量","范数","距离","邻域"], page:"Rn"},
+        {keys:["极限","连续","路径","epsilon","δ","delta"], page:"limit"},
+        {keys:["导数","偏导","微分","梯度","方向导数","切平面"], page:"derivative"},
+        {keys:["泰勒","极值","hessian","驻点","鞍点"], page:"taylor"},
+        {keys:["二重积分","换序","极坐标","面积元"], page:"double"},
+        {keys:["三重积分","球坐标","柱坐标","体积","切片"], page:"triple"},
+        {keys:["傅立叶","fourier","级数","方波","gibbs"], page:"fourier"}
+    ];
+    let targetKey = currentPage || "Rn";
+    let bestScore = -1;
+    banks.forEach(bank => {
+        const score = bank.keys.reduce((sum,key) => sum + (q.includes(key.toLowerCase()) ? 1 : 0), 0);
+        if(score > bestScore){
+            bestScore = score;
+            targetKey = bank.page;
+        }
+    });
+    const target = pages[targetKey];
+    if(q.includes("例题") || q.includes("例子") || q.includes("怎么做")){
+        return `以 <strong>${target.title}</strong> 为例：${exampleFor(targetKey)}`;
+    }
+    if(q.includes("公式") || q.includes("核心")){
+        return `<strong>${target.title}</strong> 的核心公式是：<br>${target.formula}<br>你可以先记住它表达的对象，再看动画里哪些量正在变化。`;
+    }
+    if(q.includes("动画") || q.includes("演示") || q.includes("图")){
+        return animationFor(targetKey);
+    }
+    if(q.includes("区别") || q.includes("联系")){
+        return compareAnswer(q);
+    }
+    if(page && bestScore <= 0){
+        return `当前页是 <strong>${page.title}</strong>。${page.summary}<br><br>一个有效学习顺序是：先看公式中的变量含义，再看例题如何代入，最后用动画观察参数变化带来的几何变化。`;
+    }
+    return `<strong>${target.title}</strong> 可以这样理解：${target.summary}<br><br>${exampleFor(targetKey)}`;
+}
+
+function exampleFor(key){
+    const examples = {
+        Rn:String.raw`若 \\(x=(1,2,-2,0)\\)，则 \\(\|x\|=3\\)。若要求距离，就先做坐标差，再对差向量求范数。`,
+        limit:String.raw`判断 \\(\frac{x^2-y^2}{x^2+y^2}\\) 在原点的极限，沿 \\(y=0\\) 得 1，沿 \\(x=0\\) 得 -1，所以极限不存在。`,
+        derivative:String.raw`对 \\(f=x^2+y^2\\)，在 \\((1,-1)\\) 处 \\(\nabla f=(2,-2)\\)，沿单位方向 \\(\mathbf u\\) 的变化率是 \\((2,-2)\cdot\mathbf u\\)。`,
+        taylor:String.raw`\\(\sin x\\) 在 0 点的五次近似是 \\(x-\frac{x^3}{3!}+\frac{x^5}{5!}\\)。在 0 附近它能快速逼近原函数。`,
+        double:String.raw`\\(\int_0^1\int_0^2(x+y)\,dy\,dx=3\\)。先对内层变量积分，把另一个变量当常数。`,
+        triple:String.raw`半径为 2 的球体积是 \\(\frac43\pi 2^3=\frac{32}{3}\pi\\)。也可以把水平切片面积 \\(\pi(4-z^2)\\) 从 -2 积到 2。`,
+        fourier:String.raw`方波的前几项为 \\(\frac4\pi(\sin x+\frac13\sin3x+\frac15\sin5x)\\)，项数越多，平坦区域越接近 ±1。`
+    };
+    return examples[key];
+}
+
+function animationFor(key){
+    const answers = {
+        Rn:"这个动画把高维向量投影到前两个坐标轴，同时用右侧条形显示每个坐标分量。圆圈半径随范数变化，表示向量离原点的距离。",
+        limit:"这个动画让直线、抛物线和螺旋三条路径同时靠近原点。如果所有路径的函数值都压向同一数，极限才可能存在。",
+        derivative:"这个动画展示曲面、切平面、切点和梯度。移动切点时，切平面会重新贴合曲面，梯度方向表示函数增长最快的方向。",
+        taylor:"蓝线是真实函数，黄线是泰勒多项式。提高次数后，黄线会在展开点附近更贴近蓝线。",
+        double:"小柱表示 Riemann 和。分割越细，小柱总体越接近曲面下方真实体积。",
+        triple:"一层层椭圆代表球体切片。当前高程的黄色截面面积随 z 改变，把所有截面积累加就是体积。",
+        fourier:"灰白线是方波，黄线是傅立叶部分和。增加项数后逼近更细，但跳跃点附近仍会有过冲。"
+    };
+    return answers[key];
+}
+
+function compareAnswer(q){
+    if(q.includes("极限") && q.includes("连续")){
+        return "极限只关心靠近某点时函数值趋向哪里；连续还要求这个趋向值等于该点的函数值。因此连续比极限存在多一个“函数值匹配”的条件。";
+    }
+    if(q.includes("二重") && q.includes("三重")){
+        return "二重积分在平面区域上累加面积元 \\(dA\\)，常给出曲面下体积或薄片质量；三重积分在空间区域上累加体积元 \\(dV\\)，常给出空间体积或实体质量。";
+    }
+    if(q.includes("泰勒") && q.includes("傅立叶")){
+        return "泰勒公式围绕一个点做局部多项式逼近；傅立叶级数围绕一个周期区间做全局频率分解。一个偏局部，一个偏周期整体。";
+    }
+    return "可以把这些知识看成同一条线：Rn 空间定义距离，极限定义靠近，导数研究局部线性变化，积分累加局部量，级数用无限叠加表示函数。";
+}
+
+function initBackground(){
+    if(!window.THREE) return;
+    const canvas = document.getElementById("bg");
+    bgScene = new THREE.Scene();
+    bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1600);
+    bgRenderer = new THREE.WebGLRenderer({canvas,antialias:true});
+    bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    bgRenderer.setSize(window.innerWidth, window.innerHeight);
+    const stars = new THREE.BufferGeometry();
+    const vertices = [];
+    const colors = [];
+    const palette = [
+        new THREE.Color(0x23d8ff),
+        new THREE.Color(0xffffff),
+        new THREE.Color(0xffd166),
+        new THREE.Color(0x58f2a7)
+    ];
+    for(let i=0;i<6500;i++){
+        vertices.push(
+            THREE.MathUtils.randFloatSpread(1800),
+            THREE.MathUtils.randFloatSpread(1800),
+            THREE.MathUtils.randFloatSpread(1800)
+        );
+        const c = palette[i % palette.length];
+        colors.push(c.r,c.g,c.b);
+    }
+    stars.setAttribute("position", new THREE.Float32BufferAttribute(vertices,3));
+    stars.setAttribute("color", new THREE.Float32BufferAttribute(colors,3));
+    const starMaterial = new THREE.PointsMaterial({size:1.4,vertexColors:true,transparent:true,opacity:0.88});
+    starField = new THREE.Points(stars,starMaterial);
+    bgScene.add(starField);
+    bgCamera.position.z = 6;
+    function animateBG(){
+        if(!bgRenderer) return;
+        starField.rotation.x += 0.00035;
+        starField.rotation.y += 0.00055;
+        bgRenderer.render(bgScene,bgCamera);
+        requestAnimationFrame(animateBG);
+    }
+    animateBG();
+}
+
+function resizeBackground(){
+    if(!bgRenderer || !bgCamera) return;
+    bgCamera.aspect = window.innerWidth/window.innerHeight;
+    bgCamera.updateProjectionMatrix();
+    bgRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+document.getElementById("enterBtn").addEventListener("click", enterSystem);
+document.querySelectorAll("[data-page]").forEach(btn => {
+    btn.addEventListener("click", () => loadPage(btn.dataset.page));
+});
+document.querySelectorAll("[data-toggle]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        btn.closest(".nav-section").classList.toggle("closed");
+    });
+});
+document.getElementById("askForm").addEventListener("submit", event => {
+    event.preventDefault();
+    const input = document.getElementById("askInput");
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = "";
+    handleAssistantQuestion(text);
+});
+document.querySelectorAll("[data-ask]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const text = btn.dataset.ask;
+        handleAssistantQuestion(text);
+    });
+});
+document.addEventListener("pointermove", event => {
+    document.documentElement.style.setProperty("--mx", `${event.clientX}px`);
+    document.documentElement.style.setProperty("--my", `${event.clientY}px`);
+});
+window.addEventListener("resize", resizeBackground);
+showWelcome();
+initBackground();
+typesetMath();
+checkDeepSeekStatus();
+</script>
+</body>
+</html>
